@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, type Easing } from "framer-motion";
 import { ChevronLeft, ChevronRight, Circle } from "lucide-react";
 import { HERO_IMAGES } from "../../data/images";
 import { SmartImage } from "../ui/SmartImage";
@@ -38,7 +38,7 @@ const slides = [
   },
 ];
 
-const transition = { duration: 0.6, ease: [0.16, 1, 0.3, 1] };
+const EASE = [0.16, 1, 0.3, 1] as Easing;
 
 export function HeroCarousel() {
   const [index, setIndex] = useState(0);
@@ -78,7 +78,7 @@ export function HeroCarousel() {
             initial={{ opacity: 0, scale: 1.03 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.97 }}
-            transition={transition}
+            transition={{ duration: 0.6, ease: EASE }}
           >
             <SmartImage
               src={slides[index].src}
@@ -92,7 +92,7 @@ export function HeroCarousel() {
               className="hero-carousel__overlay"
               initial={{ opacity: 0, y: 24 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.55, delay: 0.15, ease: [0.16, 1, 0.3, 1] }}
+              transition={{ duration: 0.55, delay: 0.15, ease: EASE }}
             >
               <p className="hero-carousel__eyebrow">
                 <span>Campora</span> · The Campus Marketplace
