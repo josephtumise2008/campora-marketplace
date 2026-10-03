@@ -4,9 +4,11 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "nodemon src/server.js",
-    "start": "node src/server.js"
+    "start": "node src/server.js",
+    "seed": "node src/seeds/seed.js",
+    "smoke": "node src/smoke.js",
+    "seed:memory": "CAMPORA_MEMORY_DB=true node src/seeds/seed.js"
   },
   "keywords": [],
   "author": "",

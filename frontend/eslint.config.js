@@ -18,5 +18,16 @@ export default defineConfig([
     languageOptions: {
       globals: globals.browser,
     },
+    rules: {
+      // Context modules intentionally export their provider *and* the matching
+      // hook, so Fast Refresh needs those names allowed.
+      'react-refresh/only-export-components': [
+        'error',
+        {
+          allowConstantExport: true,
+          allowExportNames: ['useAuth', 'useCart', 'useToast', 'useUniversity', 'useWishlist'],
+        },
+      ],
+    },
   },
 ])

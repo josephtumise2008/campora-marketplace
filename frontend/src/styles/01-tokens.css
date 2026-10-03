@@ -1,0 +1,119 @@
+/* ==========================================================================
+   Campora design tokens
+   Discover. Shop. Sell. Belong.
+   ========================================================================== */
+
+:root {
+  /* Brand — blue = navigation, trust, information */
+  --brand-50: #eef5ff;
+  --brand-100: #dbe9fe;
+  --brand-200: #bcd8fd;
+  --brand-300: #8bbcfb;
+  --brand-400: #4e97f2;
+  --brand-500: #1a73e8;
+  --brand-600: #1462c9;
+  --brand-700: #114ea3;
+  --brand-800: #0f3460;
+  --brand-900: #0a2544;
+
+  /* Accent — orange = the shopping action */
+  --accent-50: #fff4ee;
+  --accent-100: #ffe4d3;
+  --accent-200: #ffc7a5;
+  --accent-300: #ffa877;
+  --accent-400: #ff9f1c;
+  --accent-500: #ff6b35;
+  --accent-600: #ea5321;
+  --accent-700: #c2410c;
+
+  /* Support */
+  --success-50: #eafaf3;
+  --success-100: #cdf3e2;
+  --success-500: #10a36e;
+  --success-700: #0a7550;
+  --warning-50: #fff8e8;
+  --warning-100: #ffeec4;
+  --warning-500: #d99509;
+  --warning-700: #96650a;
+  --danger-50: #fef1f1;
+  --danger-100: #fbdede;
+  --danger-500: #d33a3a;
+  --danger-700: #9c2323;
+  --info-50: var(--brand-50);
+
+  /* Neutrals */
+  --bg: #f7f9fc;
+  --bg-subtle: #f0f4f9;
+  --bg-tint: #eef6ff;
+  --surface: #ffffff;
+  --surface-raised: #ffffff;
+  --surface-sunken: #f8fafc;
+  --text: #212529;
+  --text-secondary: #4a5563;
+  --text-muted: #6d7684;
+  --text-faint: #97a1ad;
+  --border: #e6eaf0;
+  --border-strong: #d5dbe4;
+  --border-brand: #bcd8fd;
+
+  /* Typography */
+  --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+  --font-display: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+
+  /* Radii */
+  --r-xs: 6px;
+  --r-sm: 8px;
+  --r-md: 12px;
+  --r-lg: 16px;
+  --r-xl: 22px;
+  --r-full: 999px;
+
+  /* Shadows — refined, layered for premium depth */
+  --shadow-xs: 0 1px 2px rgba(15, 52, 96, 0.04);
+  --shadow-sm: 0 2px 6px rgba(15, 52, 96, 0.06), 0 1px 2px rgba(15, 52, 96, 0.03);
+  --shadow-md: 0 8px 24px rgba(15, 52, 96, 0.09), 0 2px 6px rgba(15, 52, 96, 0.04);
+  --shadow-lg: 0 20px 56px rgba(15, 52, 96, 0.14), 0 6px 16px rgba(15, 52, 96, 0.06);
+  --shadow-xl: 0 36px 80px rgba(15, 52, 96, 0.18), 0 12px 32px rgba(15, 52, 96, 0.08);
+  --shadow-brand: 0 12px 32px rgba(26, 115, 232, 0.25), 0 6px 16px rgba(26, 115, 232, 0.12);
+  --shadow-accent: 0 12px 30px rgba(255, 107, 53, 0.28), 0 6px 16px rgba(255, 107, 53, 0.14);
+  --shadow-focus: 0 0 0 3px var(--brand-100);
+  --shadow-inset: inset 0 1px 0 rgba(255, 255, 255, 0.6);
+
+  /* Layout */
+  --container: 1280px;
+  --container-narrow: 1080px;
+  --container-text: 720px;
+  --nav-height: 66px;
+  --announce-height: 38px;
+  --gutter: 24px;
+  --aside-width: 268px;
+
+  /* Motion */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in: cubic-bezier(0.55, 0, 0.55, 0.2);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --t-fast: 140ms;
+  --t-base: 220ms;
+  --t-slow: 340ms;
+
+  /* Skeleton */
+  --skeleton-base: #eaeef4;
+  --skeleton-shine: #f4f7fa;
+}
+
+@media (max-width: 1024px) {
+  :root {
+    --nav-height: 60px;
+  }
+}
+
+@media (max-width: 640px) {
+  :root {
+    --gutter: 16px;
+    --nav-height: 56px;
+    --announce-height: 34px;
+  }
+}
