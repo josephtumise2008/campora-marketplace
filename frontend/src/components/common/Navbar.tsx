@@ -376,6 +376,11 @@ export function Navbar() {
                       <NavLink
                         to={link.to}
                         onClick={closeMenu}
+                        /* Anchors are natively draggable, and a link drag
+                           hijacks the pointer stream before Framer Motion can
+                           claim it, so a swipe that begins on a link would
+                           never close the drawer. */
+                        draggable={false}
                         className={({ isActive }) =>
                           cx("mobile-menu__link", isActive && "is-active")
                         }
@@ -385,7 +390,7 @@ export function Navbar() {
                     </motion.div>
                   ))}
                   <motion.div variants={item} custom={8}>
-                    <NavLink to="/account/orders" className="mobile-menu__link" onClick={closeMenu}>
+                    <NavLink to="/account/orders" className="mobile-menu__link" onClick={closeMenu} draggable={false}>
                       My orders
                     </NavLink>
                   </motion.div>
@@ -394,17 +399,18 @@ export function Navbar() {
                       to="/account/wishlist"
                       className="mobile-menu__link"
                       onClick={closeMenu}
+                      draggable={false}
                     >
                       Saved items
                     </NavLink>
                   </motion.div>
                   <motion.div variants={item} custom={10}>
-                    <NavLink to="/sell" className="mobile-menu__link" onClick={closeMenu}>
+                    <NavLink to="/sell" className="mobile-menu__link" onClick={closeMenu} draggable={false}>
                       Sell on Campora
                     </NavLink>
                   </motion.div>
                   <motion.div variants={item} custom={11}>
-                    <NavLink to="/help" className="mobile-menu__link" onClick={closeMenu}>
+                    <NavLink to="/help" className="mobile-menu__link" onClick={closeMenu} draggable={false}>
                       Help centre
                     </NavLink>
                   </motion.div>

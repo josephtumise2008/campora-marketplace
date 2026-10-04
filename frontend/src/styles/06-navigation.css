@@ -182,6 +182,31 @@
 
 .navbar__burger { display: none; }
 
+/* Hamburger -> X morph. The three bars are spans so the top and bottom lines
+   can rotate 45deg and the middle line can fade out; the whole button spins
+   on close so the icon returns to its resting orientation. */
+.navbar__burger .burger__bar {
+  display: block;
+  width: 18px;
+  height: 2px;
+  border-radius: 2px;
+  background: currentColor;
+  transition: transform var(--dur-drawer-close) var(--ease-drawer),
+    opacity var(--dur-drawer-close) var(--ease-drawer);
+}
+.navbar__burger .burger__bars {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  transition: transform var(--dur-drawer-close) var(--ease-drawer);
+}
+.navbar__burger--open .burger__bars { transform: rotate(90deg); }
+.navbar__burger--open .burger__bar:nth-child(1) { transform: translateY(6px) rotate(45deg); }
+.navbar__burger--open .burger__bar:nth-child(2) { opacity: 0; transform: scaleX(0); }
+.navbar__burger--open .burger__bar:nth-child(3) { transform: translateY(-6px) rotate(-45deg); }
+
 /* Tablet: the desktop link row no longer fits, so the burger takes over and
    search takes the space the nav links gave up. The header still has to earn
    its width, so the two guest buttons collapse to one icon and the brand
@@ -615,8 +640,16 @@
   font-weight: 600;
   color: var(--text-secondary);
   max-width: 220px;
+  transition: background var(--t-fast), border-color var(--t-fast), transform var(--t-fast);
 }
 .campus-picker__trigger:hover { border-color: var(--brand-300); background: var(--brand-50); }
+/* Press tint only — the chip stays legible at rest, so the affordance is the
+   small dip in scale plus a step into the brand tint. */
+.campus-picker__trigger:active {
+  background: var(--brand-100);
+  border-color: var(--brand-400);
+  transform: scale(0.98);
+}
 .campus-picker__icon { color: var(--brand-500); flex-shrink: 0; }
 .campus-picker__text {
   display: flex;
@@ -736,9 +769,15 @@
   position: absolute;
   inset: 0;
   z-index: 0;
-  background: rgba(10, 37, 68, 0.52);
-  backdrop-filter: blur(3px);
-  -webkit-backdrop-filter: blur(3px);
+  /* Deep navy, not black. Opacity is driven by Framer Motion so it can track
+     a swipe; the blur is transitioned separately so it eases in instead of
+     popping on the first frame. */
+  background: var(--brand-scrim);
+  opacity: 0;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  transition: backdrop-filter var(--dur-drawer-open) var(--ease-drawer),
+    -webkit-backdrop-filter var(--dur-drawer-open) var(--ease-drawer);
   pointer-events: auto;
 }
 
@@ -752,8 +791,10 @@
   z-index: 1;
   width: min(340px, 88vw);
   max-width: 100vw;
-  background: var(--surface);
-  background-color: #fff;
+  /* Opaque white, declared once and unconditionally. The scrim behind carries
+     a backdrop-filter, and a translucent (or merely not-yet-painted) sheet
+     lets it show through as a dark hairline down the left edge at x=0. */
+  background: #fff;
   box-shadow: var(--shadow-xl);
   border-right: 1px solid var(--border);
   display: flex;
@@ -765,16 +806,33 @@
   overscroll-behavior: contain;
   padding-top: env(safe-area-inset-top);
   pointer-events: auto;
+  /* Own stacking context so the sheet never samples the scrim underneath it. */
+  isolation: isolate;
+  /* `pan-y` keeps vertical scrolling inside the drawer working while
+     Framer Motion claims horizontal drags for the swipe-to-close gesture.
+     No permanent `will-change: transform`: promoting the sheet to its own
+     compositor layer for the whole time it is open is what produced the
+     1px seam against the blurred scrim on iOS Safari. Framer Motion promotes
+     it by itself for the length of the slide. */
+  touch-action: pan-y;
 }
 
+/* Every row in the drawer lines up on the same 16px inset: the search pill,
+   Log in and Join Campora all start and end at the identical x. */
 .mobile-menu__head {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 16px 18px;
+  padding: 16px;
   border-bottom: 1px solid var(--border);
   flex-shrink: 0;
+  /* No long-press text selection anywhere in the drawer: on iOS a tap-drag
+     selects the label under the finger and `::selection` repaints it navy on
+     light blue, which reads as a two-tone button. */
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .mobile-menu__body {
@@ -783,9 +841,25 @@
   overflow-y: auto;
   overscroll-behavior: contain;
   -webkit-overflow-scrolling: touch;
+  padding-inline: 16px;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
 }
-.mobile-menu__body > .search {
-  padding: 14px 12px 6px;
+/* The SearchBar is wrapped in a motion.div for the stagger, so it is not a
+   direct child of the body — match on the descendant or the horizontal inset
+   silently never applies and the pill runs edge to edge. */
+.mobile-menu__body .search {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 14px 0 6px;
+}
+.mobile-menu__body .search__form { box-sizing: border-box; width: 100%; }
+/* The search field is the one place a selection is genuinely useful. */
+.mobile-menu__body input,
+.mobile-menu__body textarea {
+  -webkit-user-select: text;
+  user-select: text;
 }
 
 /* Signed-out actions. The header collapses these to a single icon on phones,
@@ -794,35 +868,163 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
-  padding: 4px 12px 12px;
+  padding: 4px 0 12px;
 }
 .mobile-menu__auth .btn {
+  box-sizing: border-box;
   width: 100%;
   justify-content: center;
   /* Comfortably past the 44px touch-target minimum. */
   height: 46px;
+  /* The whole label is one colour and one element. Without this, a tap-drag
+     can select part of the text and `::selection` (--brand-900 on
+     --brand-100) splits "Log in" into two colours. */
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Join Campora — keeps the existing brand gradient, adds a press squeeze, a
+   hover lift with a blue glow, and a shimmer that only runs on hover. */
+.mobile-menu__auth .btn--primary {
+  position: relative;
+  overflow: hidden;
+  transition: transform var(--t-base) var(--ease-drawer),
+    box-shadow var(--t-base) var(--ease-drawer);
+}
+.mobile-menu__auth .btn--primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 28px var(--brand-glow);
+}
+.mobile-menu__auth .btn--primary:active {
+  transform: scale(0.97);
+  box-shadow: 0 4px 12px var(--brand-glow);
+}
+/* Shimmer sweep: a skewed white highlight travelling across the gradient.
+   Idle at translateX(-120%) so it is never visible without a hover, and it
+   does not re-run on every pointer move because it is bound to :hover only. */
+.mobile-menu__auth .btn--primary::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 45%;
+  pointer-events: none;
+  background: linear-gradient(
+    100deg,
+    rgba(255, 255, 255, 0) 0%,
+    rgba(255, 255, 255, 0.34) 50%,
+    rgba(255, 255, 255, 0) 100%
+  );
+  transform: translateX(-120%) skewX(-18deg);
+}
+.mobile-menu__auth .btn--primary:hover::after {
+  animation: drawer-shimmer 900ms var(--ease-drawer) 1;
+}
+@keyframes drawer-shimmer {
+  from { transform: translateX(-120%) skewX(-18deg); }
+  to { transform: translateX(320%) skewX(-18deg); }
+}
+
+/* Log in — a plain white button with a thin grey border and dark text, so it
+   reads as the secondary action next to the blue Join Campora gradient. The
+   press state is a very light blue tint and nothing else. */
+.mobile-menu__auth .btn--outline {
+  background: #fff;
+  color: var(--text);
+  border: 1px solid var(--border-strong);
+  border-radius: 14px;
+  transition: background var(--t-base) var(--ease-drawer),
+    border-color var(--t-base) var(--ease-drawer), box-shadow var(--t-base) var(--ease-drawer);
+}
+.mobile-menu__auth .btn--outline:hover {
+  background: #fff;
+  border-color: var(--border-strong);
+  color: var(--text);
+  box-shadow: 0 6px 18px rgba(15, 52, 96, 0.08);
+}
+.mobile-menu__auth .btn--outline:active {
+  background: var(--brand-50);
+  border-color: var(--brand-200);
+  color: var(--text);
 }
 
 .mobile-menu__nav {
   display: flex;
   flex-direction: column;
-  padding: 10px 12px;
+  padding: 10px 0;
   gap: 2px;
 }
 
 .mobile-menu__link {
-  padding: 12px 12px;
+  position: relative;
+  display: flex;
+  align-items: center;
+  /* Roomy tap rows: 56px clears the 44px minimum with room to spare and keeps
+     the label from crowding its neighbour. */
+  min-height: 56px;
+  padding: 16px 24px;
+  /* Explicit so the row lands on exactly 56px rather than 16+16+24.5. */
+  line-height: 24px;
   border-radius: var(--r-sm);
   font-size: 0.9375rem;
   font-weight: 600;
   color: var(--text-secondary);
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  transition: background var(--t-fast) var(--ease-drawer),
+    color var(--t-fast) var(--ease-drawer), transform var(--t-fast) var(--ease-drawer);
 }
-.mobile-menu__link:hover { background: var(--bg-subtle); color: var(--text); }
-.mobile-menu__link.is-active { background: var(--brand-50); color: var(--brand-700); }
+/* Short phones (iPhone 5 and similar) cannot fit nine 56px rows plus the
+   pinned head and foot, so trim to 48px — still above the touch minimum —
+   rather than let the list scroll behind the footer. */
+@media (max-height: 640px) {
+  .mobile-menu__link {
+    min-height: 48px;
+    padding: 12px 24px;
+  }
+}
+/* Press: soft brand tint plus a small squeeze. */
+.mobile-menu__link:active {
+  background: var(--brand-light);
+  color: var(--brand-dark);
+  transform: scale(0.98);
+}
+/* Hover (desktop / hybrid devices): faint tint, 4px nudge, brand text. */
+.mobile-menu__link:hover {
+  background: var(--brand-light);
+  color: var(--brand);
+  transform: translateX(4px);
+}
+.mobile-menu__link.is-active {
+  background: var(--brand-light);
+  color: var(--brand-dark);
+}
+/* Active-page indicator: a short brand bar that scales in from the left edge.
+   The drawer remounts on every open, so this animation replays each time
+   rather than latching on permanently. */
+.mobile-menu__link.is-active::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 50%;
+  width: 3px;
+  height: 18px;
+  margin-top: -9px;
+  border-radius: 0 3px 3px 0;
+  background: var(--brand);
+  animation: drawer-indicator var(--dur-drawer-open) var(--ease-drawer) both;
+}
+@keyframes drawer-indicator {
+  from { transform: scaleY(0); opacity: 0; }
+  to { transform: scaleY(1); opacity: 1; }
+}
 
 .mobile-menu__foot {
   flex-shrink: 0;
-  padding: 18px;
+  padding: 18px 16px;
   padding-bottom: calc(18px + env(safe-area-inset-bottom));
   border-top: 1px solid var(--border);
   background: var(--surface);
@@ -862,16 +1064,101 @@
     border-color var(--t-fast) var(--ease-out), background var(--t-fast) var(--ease-out),
     transform var(--t-fast) var(--ease-out);
 }
-.social-link:hover {
-  color: var(--brand-600);
-  border-color: var(--brand-300);
-  background: var(--brand-50);
-  transform: translateY(-1px);
+/* Social icons: a light-blue disc fades in behind the glyph while the border
+   and icon shift to brand, with a small scale on hover and a squeeze on
+   press. Scoped to the drawer so the footer's dark-surface variant is
+   untouched. */
+.mobile-menu__foot .social-link {
+  position: relative;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  transition: color var(--t-base) var(--ease-drawer),
+    border-color var(--t-base) var(--ease-drawer), transform var(--t-base) var(--ease-drawer);
 }
-.social-link:active { transform: translateY(0); }
+.mobile-menu__foot .social-link::before {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  border-radius: var(--r-full);
+  background: var(--brand-light);
+  opacity: 0;
+  transform: scale(0.82);
+  transition: opacity var(--t-base) var(--ease-drawer),
+    transform var(--t-base) var(--ease-drawer);
+  pointer-events: none;
+}
+.mobile-menu__foot .social-link > * { position: relative; z-index: 1; }
+.mobile-menu__foot .social-link:hover {
+  color: var(--brand);
+  border-color: var(--brand);
+  transform: scale(1.08);
+}
+.mobile-menu__foot .social-link:hover::before { opacity: 1; transform: scale(1); }
+.mobile-menu__foot .social-link:active { transform: scale(0.95); }
+
+/* The "Shopping at <campus>" chip gets a soft brand tint on press. */
+.mobile-menu__foot .campus-picker__trigger {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  transition: background var(--t-base) var(--ease-drawer),
+    border-color var(--t-base) var(--ease-drawer), transform var(--t-base) var(--ease-drawer);
+}
+.mobile-menu__foot .campus-picker__trigger:active {
+  background: var(--brand-light);
+  border-color: var(--brand-300);
+  transform: scale(0.985);
+}
 
 @media (max-width: 400px) {
   .social-link { width: 34px; height: 34px; }
+}
+
+/* --- Drawer focus + reduced motion ---------------------------------------- */
+
+/* Keyboard focus: a brand ring with a soft brand glow behind it. Only for
+   keyboard users — pointer taps keep their own pressed styling. */
+.mobile-menu :focus-visible,
+.navbar__burger:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px var(--brand-glow);
+  border-radius: var(--r-xs);
+}
+
+/* Respect the OS setting: drop the slide, the stagger and the shimmer, and
+   fade the drawer in with opacity only. Framer Motion reads the same media
+   query via useReducedMotion and flattens its transforms to match. */
+@media (prefers-reduced-motion: reduce) {
+  .mobile-menu__sheet,
+  .navbar__burger .burger__bars,
+  .navbar__burger .burger__bar {
+    transition: opacity var(--t-base) linear !important;
+    animation: none !important;
+  }
+  .navbar__burger--open .burger__bars { transform: none; }
+  .navbar__burger--open .burger__bar:nth-child(1),
+  .navbar__burger--open .burger__bar:nth-child(3) { transform: none; }
+  .navbar__burger--open .burger__bar:nth-child(2) { opacity: 0; }
+
+  .mobile-menu__link,
+  .mobile-menu__auth .btn,
+  .mobile-menu__foot .social-link,
+  .mobile-menu__foot .campus-picker__trigger {
+    transition: background-color var(--t-fast) linear,
+      border-color var(--t-fast) linear, color var(--t-fast) linear !important;
+  }
+  .mobile-menu__link:hover,
+  .mobile-menu__link:active { transform: none; }
+  .mobile-menu__auth .btn--primary:hover,
+  .mobile-menu__auth .btn--primary:active,
+  .mobile-menu__auth .btn--outline:active,
+  .mobile-menu__foot .social-link:hover,
+  .mobile-menu__foot .social-link:active { transform: none; }
+  .mobile-menu__auth .btn--primary::after { display: none; }
+  .mobile-menu__foot .social-link::before { transition: opacity var(--t-fast) linear; transform: none; }
+  .mobile-menu__link.is-active::before { animation: none; }
 }
 
 /* --- Sell CTA ------------------------------------------------------------ */
@@ -1070,6 +1357,7 @@
   color: #fff;
   border-color: rgba(255, 255, 255, 0.42);
   background: rgba(255, 255, 255, 0.14);
+  transform: translateY(-1px);
 }
 
 .footer__campus {
@@ -1128,14 +1416,15 @@
 
 /* --- Dashboard shells ---------------------------------------------------- */
 
-.seller-layout,
+/* NOTE: the seller shell is a grid with a collapsing rail, not a flex row —
+   see `.seller-shell` in 10-dashboard.css. Only the admin shell lives here. */
+
 .admin-layout {
   display: flex;
   min-height: 100vh;
   background: var(--bg);
 }
 
-.seller-layout__nav,
 .admin-layout__nav {
   width: var(--aside-width);
   flex-shrink: 0;
@@ -1154,7 +1443,6 @@
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
 }
 
-.seller-layout__card,
 .admin-layout__brand {
   display: flex;
   align-items: center;
@@ -1167,7 +1455,6 @@
   -webkit-backdrop-filter: blur(8px);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2);
 }
-.seller-layout__name,
 .admin-layout__title {
   display: flex;
   flex-direction: column;
@@ -1177,7 +1464,6 @@
   color: #fff;
   line-height: 1.25;
 }
-.seller-layout__status,
 .admin-layout__subtitle {
   display: flex;
   align-items: center;
@@ -1186,16 +1472,6 @@
   color: rgba(255, 255, 255, 0.6);
   font-weight: 500;
 }
-.seller-layout__dot {
-  width: 7px;
-  height: 7px;
-  border-radius: var(--r-full);
-  background: var(--success-500);
-  flex-shrink: 0;
-  box-shadow: 0 0 0 3px rgba(16, 163, 110, 0.22);
-}
-.seller-layout__dot.is-pending { background: var(--warning-500); box-shadow: 0 0 0 3px rgba(217, 149, 9, 0.22); }
-.seller-layout__dot.is-suspended { background: var(--danger-500); box-shadow: 0 0 0 3px rgba(211, 58, 58, 0.22); }
 
 .admin-layout__mark {
   display: inline-flex;
@@ -1210,13 +1486,11 @@
   flex-shrink: 0;
 }
 
-.seller-layout__nav ul,
 .admin-layout__nav ul {
   display: flex;
   flex-direction: column;
   gap: 3px;
 }
-.seller-layout__nav a,
 .admin-layout__nav a {
   display: flex;
   align-items: center;
@@ -1228,47 +1502,26 @@
   color: rgba(255, 255, 255, 0.72);
   transition: background var(--t-fast) var(--ease-out), color var(--t-fast) var(--ease-out);
 }
-.seller-layout__nav a:hover,
 .admin-layout__nav a:hover { background: rgba(255, 255, 255, 0.08); color: #fff; }
-.seller-layout__nav a.active,
 .admin-layout__nav a.active {
   background: var(--brand-500);
   color: #fff;
   font-weight: 600;
   box-shadow: var(--shadow-brand);
 }
-.seller-layout__nav a svg,
 .admin-layout__nav a svg { flex-shrink: 0; opacity: 0.85; }
 
-.seller-layout__identity,
-.seller-layout__switch {
-  margin-top: auto;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  padding-top: 18px;
-  border-top: 1px solid rgba(255, 255, 255, 0.12);
-}
-.seller-layout__identity {
-  flex-direction: row;
-  align-items: center;
-  gap: 10px;
-  font-size: 0.8125rem;
-}
-.seller-layout__hint,
 .admin-layout__hint {
   font-size: 0.75rem;
   color: rgba(255, 255, 255, 0.55);
   line-height: 1.5;
 }
 
-.seller-layout__nav .btn--ghost,
 .admin-layout__nav .btn--ghost {
   color: rgba(255, 255, 255, 0.72);
   border-color: rgba(255, 255, 255, 0.18);
   justify-content: center;
 }
-.seller-layout__nav .btn--ghost:hover,
 .admin-layout__nav .btn--ghost:hover { background: rgba(255, 255, 255, 0.1); color: #fff; }
 
 .admin-layout__foot {
@@ -1279,7 +1532,6 @@
   color: rgba(255, 255, 255, 0.42);
 }
 
-.seller-layout__main,
 .admin-layout__main {
   flex: 1;
   min-width: 0;
@@ -1287,9 +1539,7 @@
 }
 
 @media (max-width: 1024px) {
-  .seller-layout,
   .admin-layout { flex-direction: column; }
-  .seller-layout__nav,
   .admin-layout__nav {
     width: 100%;
     height: auto;
@@ -1300,37 +1550,11 @@
     overflow-x: auto;
     padding: 14px;
   }
-  .seller-layout__nav ul,
   .admin-layout__nav ul { flex-direction: row; gap: 6px; }
-  .seller-layout__nav a,
   .admin-layout__nav a { white-space: nowrap; padding: 9px 13px; }
-  .seller-layout__identity,
-  .seller-layout__switch,
   .admin-layout__foot,
-  .seller-layout__hint,
   .admin-layout__hint { display: none; }
 }
-
-/* Seller gate (not yet a store) */
-.seller-gate {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  text-align: center;
-  gap: 16px;
-  padding: clamp(48px, 8vw, 90px) 24px;
-}
-.seller-gate__icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 72px;
-  height: 72px;
-  border-radius: var(--r-lg);
-  background: var(--brand-50);
-  color: var(--brand-500);
-}
-.seller-gate__actions { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
 
 /* --- Account shell ------------------------------------------------------- */
 
