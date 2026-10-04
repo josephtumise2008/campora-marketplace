@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import { GraduationCap, Heart, Store, Truck } from "lucide-react";
 import { useUniversity } from "../../context/UniversityContext";
 import { useAuth } from "../../context/AuthContext";
+import { SOCIAL_LINKS } from "../../data/socialLinks";
 
 const COLUMNS = [
   {
@@ -82,6 +83,21 @@ export function Footer() {
               <Heart size={15} aria-hidden="true" /> Student-first support
             </li>
           </ul>
+          <div className="social-row footer__social">
+            <span className="social-row__label">Follow us</span>
+            {SOCIAL_LINKS.map(({ id, label, href, icon: Icon }) => (
+              <a
+                key={id}
+                className="social-link"
+                href={href}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label={`${label} (opens in a new tab)`}
+              >
+                <Icon size={17} aria-hidden="true" />
+              </a>
+            ))}
+          </div>
         </div>
 
         <div className="footer__columns">

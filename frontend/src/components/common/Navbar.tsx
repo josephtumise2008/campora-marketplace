@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, NavLink, useLocation } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import { Heart, Menu, ShoppingBag, Store, X } from "lucide-react";
@@ -6,6 +6,7 @@ import { useAuth } from "../../context/AuthContext";
 import { useCart } from "../../context/CartContext";
 import { useWishlist } from "../../context/WishlistContext";
 import { useBodyScrollLock } from "../../hooks/useAsync";
+import { SOCIAL_LINKS } from "../../data/socialLinks";
 import { cx } from "../../utils/format";
 import { SearchBar } from "./SearchBar";
 import { UniversityPicker } from "./UniversityPicker";
@@ -27,6 +28,8 @@ export function Navbar() {
   const location = useLocation();
   const [menuOpen, setMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const sheetRef = useRef<HTMLDivElement>(null);
+  const burgerRef = useRef<HTMLButtonElement>(null);
   useBodyScrollLock(menuOpen);
 
   // Close the mobile menu on navigation. Adjusting during render (rather than in
@@ -44,6 +47,39 @@ export function Navbar() {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
+  // Escape closes the drawer and hands focus back to the burger. Tab is
+  // cycled inside the sheet so focus cannot wander into the inert page
+  // behind the scrim, and opening moves focus onto the close button.
+  useEffect(() => {
+    if (!menuOpen) return;
+    const sheet = sheetRef.current;
+    sheet?.querySelector<HTMLElement>(".mobile-menu__head button")?.focus();
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        setMenuOpen(false);
+        burgerRef.current?.focus();
+        return;
+      }
+      if (event.key !== "Tab" || !sheet) return;
+      const focusable = sheet.querySelectorAll<HTMLElement>(
+        'a[href], button:not([disabled]), input, [tabindex]:not([tabindex="-1"])',
+      );
+      if (!focusable.length) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [menuOpen]);
+
   return (
     <>
       <a className="skip-link" href="#main">
@@ -53,7 +89,8 @@ export function Navbar() {
       <div className="announce">
         <div className="container announce__inner">
           <p>
-            <strong>Free campus delivery</strong> on orders over $35 from verified stores.
+            <strong>Free campus delivery</strong>
+            <span className="announce__more"> on orders over $35 from verified stores.</span>
           </p>
           <div className="announce__links">
             <Link to="/sell">Sell on Campora</Link>
@@ -66,10 +103,12 @@ export function Navbar() {
         <div className="container navbar__inner">
           <button
             type="button"
+            ref={burgerRef}
             className="icon-btn navbar__burger"
             onClick={() => setMenuOpen(true)}
             aria-label="Open menu"
             aria-expanded={menuOpen}
+            aria-controls="mobile-menu"
           >
             <Menu size={20} aria-hidden="true" />
           </button>
@@ -138,6 +177,8 @@ export function Navbar() {
           >
             <motion.div
               className="mobile-menu__sheet"
+              id="mobile-menu"
+              ref={sheetRef}
               initial={{ x: "-100%" }}
               animate={{ x: 0 }}
               exit={{ x: "-100%" }}
@@ -166,31 +207,53 @@ export function Navbar() {
                 </button>
               </div>
 
-              <SearchBar variant="page" onSubmitted={() => setMenuOpen(false)} />
+              <div className="mobile-menu__body">
+                <SearchBar variant="page" onSubmitted={() => setMenuOpen(false)} />
 
-              <nav className="mobile-menu__nav" aria-label="Mobile">
-                {NAV_LINKS.map((link) => (
-                  <NavLink
-                    key={link.to}
-                    to={link.to}
-                    className={({ isActive }) => cx("mobile-menu__link", isActive && "is-active")}
-                  >
-                    {link.label}
+                <nav className="mobile-menu__nav" aria-label="Mobile">
+                  {NAV_LINKS.map((link) => (
+                    <NavLink
+                      key={link.to}
+                      to={link.to}
+                      className={({ isActive }) =>
+                        cx("mobile-menu__link", isActive && "is-active")
+                      }
+                    >
+                      {link.label}
+                    </NavLink>
+                  ))}
+                  <NavLink to="/account/orders" className="mobile-menu__link">
+                    My orders
                   </NavLink>
-                ))}
-                <NavLink to="/account/orders" className="mobile-menu__link">
-                  My orders
-                </NavLink>
-                <NavLink to="/account/wishlist" className="mobile-menu__link">
-                  Saved items
-                </NavLink>
-                <NavLink to="/sell" className="mobile-menu__link">
-                  Sell on Campora
-                </NavLink>
-              </nav>
+                  <NavLink to="/account/wishlist" className="mobile-menu__link">
+                    Saved items
+                  </NavLink>
+                  <NavLink to="/sell" className="mobile-menu__link">
+                    Sell on Campora
+                  </NavLink>
+                  <NavLink to="/help" className="mobile-menu__link">
+                    Help centre
+                  </NavLink>
+                </nav>
+              </div>
 
               <div className="mobile-menu__foot">
                 <UniversityPicker />
+                <div className="social-row">
+                  <span className="social-row__label">Follow</span>
+                  {SOCIAL_LINKS.map(({ id, label, href, icon: Icon }) => (
+                    <a
+                      key={id}
+                      className="social-link"
+                      href={href}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      aria-label={`${label} (opens in a new tab)`}
+                    >
+                      <Icon size={17} aria-hidden="true" />
+                    </a>
+                  ))}
+                </div>
               </div>
             </motion.div>
             <button

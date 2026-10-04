@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import { ArrowRight, ShoppingBag, Trash2, X } from "lucide-react";
@@ -11,7 +12,20 @@ import { Spinner } from "../ui/Feedback";
 export function CartDrawer() {
   const cart = useCart();
   const navigate = useNavigate();
-  useBodyScrollLock(cart.isOpen);
+  const { isOpen, closeCart } = cart;
+  useBodyScrollLock(isOpen);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        closeCart();
+      }
+    };
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [isOpen, closeCart]);
 
   const groups = cart.lines.reduce<Record<string, typeof cart.lines>>((acc, line) => {
     const key = line.storeName || "Campus stores";
