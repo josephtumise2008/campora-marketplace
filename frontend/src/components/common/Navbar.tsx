@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, NavLink, useLocation } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import { Heart, Menu, ShoppingBag, Store, X } from "lucide-react";
@@ -30,14 +30,17 @@ export function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const sheetRef = useRef<HTMLDivElement>(null);
   const burgerRef = useRef<HTMLButtonElement>(null);
+  const closeMenu = useCallback(() => setMenuOpen(false), []);
   useBodyScrollLock(menuOpen);
 
   // Close the mobile menu on navigation. Adjusting during render (rather than in
-  // an effect) avoids a flash of the open menu on the new page.
+  // an effect) avoids a flash of the open menu on the new page. This is a
+  // backstop only: tapping the link for the route you are already on does not
+  // change the pathname, so every drawer link also closes explicitly.
   const [lastPath, setLastPath] = useState(location.pathname);
   if (lastPath !== location.pathname) {
     setLastPath(location.pathname);
-    if (menuOpen) setMenuOpen(false);
+    if (menuOpen) closeMenu();
   }
 
   useEffect(() => {
@@ -210,11 +213,31 @@ export function Navbar() {
               <div className="mobile-menu__body">
                 <SearchBar variant="page" onSubmitted={() => setMenuOpen(false)} />
 
+                {!isAuthenticated ? (
+                  <div className="mobile-menu__auth">
+                    <Link
+                      to="/login"
+                      className="btn btn--outline btn--block"
+                      onClick={() => setMenuOpen(false)}
+                    >
+                      Log in
+                    </Link>
+                    <Link
+                      to="/register"
+                      className="btn btn--primary btn--block"
+                      onClick={() => setMenuOpen(false)}
+                    >
+                      Join Campora
+                    </Link>
+                  </div>
+                ) : null}
+
                 <nav className="mobile-menu__nav" aria-label="Mobile">
                   {NAV_LINKS.map((link) => (
                     <NavLink
                       key={link.to}
                       to={link.to}
+                      onClick={() => setMenuOpen(false)}
                       className={({ isActive }) =>
                         cx("mobile-menu__link", isActive && "is-active")
                       }
@@ -222,16 +245,16 @@ export function Navbar() {
                       {link.label}
                     </NavLink>
                   ))}
-                  <NavLink to="/account/orders" className="mobile-menu__link">
+                  <NavLink to="/account/orders" className="mobile-menu__link" onClick={closeMenu}>
                     My orders
                   </NavLink>
-                  <NavLink to="/account/wishlist" className="mobile-menu__link">
+                  <NavLink to="/account/wishlist" className="mobile-menu__link" onClick={closeMenu}>
                     Saved items
                   </NavLink>
-                  <NavLink to="/sell" className="mobile-menu__link">
+                  <NavLink to="/sell" className="mobile-menu__link" onClick={closeMenu}>
                     Sell on Campora
                   </NavLink>
-                  <NavLink to="/help" className="mobile-menu__link">
+                  <NavLink to="/help" className="mobile-menu__link" onClick={closeMenu}>
                     Help centre
                   </NavLink>
                 </nav>
