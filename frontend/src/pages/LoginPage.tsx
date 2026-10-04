@@ -140,7 +140,9 @@ export default function LoginPage() {
       </form>
 
       <div className="demo-accounts">
-        <p className="demo-accounts__title">Demo accounts · password campora123</p>
+        <p className="demo-accounts__title">
+          Demo accounts · password <span className="demo-accounts__password">campora123</span>
+        </p>
         <ul>
           {DEMO_ACCOUNTS.map((account) => (
             <li key={account.email}>

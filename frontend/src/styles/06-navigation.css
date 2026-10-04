@@ -1755,6 +1755,13 @@
   color: var(--brand-700);
   margin-bottom: 10px;
 }
+/* The title is uppercased as a label, but the password is a literal that has
+   to be typed exactly as written — showing it as CAMPORA123 sends people to
+   type a password that is rejected. */
+.demo-accounts__password {
+  text-transform: none;
+  letter-spacing: 0.02em;
+}
 .demo-accounts ul { display: flex; flex-direction: column; gap: 8px; }
 .demo-accounts li {
   display: grid;
