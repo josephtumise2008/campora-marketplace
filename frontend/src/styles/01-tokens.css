@@ -99,6 +99,25 @@
   --t-base: 220ms;
   --t-slow: 340ms;
 
+  /* --- Interaction palette -------------------------------------------------
+     Semantic aliases so motion work never has to invent a colour. Every
+     value below is an alias of an existing brand ramp step — there are no
+     new hues here. `--brand` is the same blue as the "Join Campora"
+     gradient, `--brand-dark` its darker end, `--brand-light` the tint used
+     for fills and pressed states, `--brand-glow` that blue at ~25%. */
+  --brand: var(--brand-500);
+  --brand-dark: var(--brand-600);
+  --brand-light: var(--brand-50);
+  --brand-glow: rgba(26, 115, 232, 0.25);
+  /* Deep navy scrim: --brand-900 at ~42%, never pure black. */
+  --brand-scrim: rgba(10, 37, 68, 0.42);
+
+  /* Drawer motion. Opening is slower and eased-out; closing is quicker so it
+     feels responsive to the tap that triggered it. */
+  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+  --dur-drawer-open: 350ms;
+  --dur-drawer-close: 250ms;
+
   /* Skeleton */
   --skeleton-base: #eaeef4;
   --skeleton-shine: #f4f7fa;

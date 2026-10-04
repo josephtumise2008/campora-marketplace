@@ -2,11 +2,321 @@
    Dashboards — stat tiles, charts, pipelines, seller/admin data views
    ========================================================================== */
 
+/* --- Seller shell ---------------------------------------------------------
+   A grid, not a flex row. The aside is a grid item, so `position: sticky`
+   works against the viewport and the content column is genuinely the second
+   column (the old flex version nested the aside inside a card, which parked
+   the sidebar mid-page and pushed content past the halfway mark).
+     >= 1024px  260px sidebar, labels visible
+     640-1023px 76px icon rail, labels in a hover/focus tooltip
+     <  640px   sidebar removed, fixed bottom tab bar instead
+   ------------------------------------------------------------------------- */
+
+.seller-shell {
+  --seller-side-w: 260px;
+  --seller-tabs-h: 58px;
+  display: grid;
+  grid-template-columns: var(--seller-side-w) minmax(0, 1fr);
+  align-items: start;
+  background: var(--bg);
+}
+
+.seller-side {
+  position: sticky;
+  top: var(--nav-height);
+  height: calc(100vh - var(--nav-height));
+  height: calc(100dvh - var(--nav-height));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  background: radial-gradient(120% 120% at 0% 0%, rgba(255, 255, 255, 0.08) 0%, transparent 60%),
+    linear-gradient(180deg, var(--brand-900) 0%, #0c2142 100%);
+  color: rgba(255, 255, 255, 0.72);
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.22) transparent;
+}
+
+.seller-side__inner {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  min-height: 100%;
+  padding: 22px 16px;
+}
+
+.seller-side__identity {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 11px 12px;
+  border-radius: var(--r-sm);
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+.seller-side__identity > .store-logo { flex: none; }
+.seller-side__idtext { min-width: 0; }
+.seller-side__name {
+  margin: 0;
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: #fff;
+  line-height: 1.25;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.seller-side__status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 3px 0 0;
+  font-size: 0.6875rem;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.6);
+}
+.seller-side__dot {
+  width: 7px;
+  height: 7px;
+  flex-shrink: 0;
+  border-radius: var(--r-full);
+  background: var(--success-500);
+  box-shadow: 0 0 0 3px rgba(16, 163, 110, 0.22);
+}
+
+.seller-side__nav ul {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.seller-side__link {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  min-height: 44px;
+  padding: 10px 12px;
+  border-radius: var(--r-sm);
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.72);
+  transition: background var(--t-fast) var(--ease-out), color var(--t-fast) var(--ease-out);
+}
+.seller-side__link:hover { background: rgba(255, 255, 255, 0.08); color: #fff; }
+.seller-side__link:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+}
+.seller-side__link.is-active {
+  background: var(--brand-500);
+  color: #fff;
+  font-weight: 600;
+  box-shadow: var(--shadow-brand);
+}
+.seller-side__link svg { flex-shrink: 0; opacity: 0.85; }
+.seller-side__link.is-active svg { opacity: 1; }
+.seller-side__label { min-width: 0; }
+
+.seller-side__foot {
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-top: 18px;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+}
+.seller-side__store-link {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 9px 12px;
+  border-radius: var(--r-sm);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.82);
+  transition: background var(--t-fast) var(--ease-out), color var(--t-fast) var(--ease-out);
+}
+.seller-side__store-link:hover { background: rgba(255, 255, 255, 0.1); color: #fff; }
+.seller-side__store-link:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+.seller-side__store-link svg { flex-shrink: 0; }
+.seller-side__hint {
+  margin: 0;
+  padding: 0 2px;
+  font-size: 0.6875rem;
+  line-height: 1.5;
+  color: rgba(255, 255, 255, 0.45);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.seller-main { min-width: 0; }
+.seller-main__inner {
+  padding: clamp(20px, 2.6vw, 34px);
+  display: flex;
+  flex-direction: column;
+  gap: clamp(18px, 2vw, 24px);
+}
+
+/* Phone: no room for a sidebar, so the tab bar takes over. */
+.seller-tabs { display: none; }
+
+@media (max-width: 1023px) {
+  .seller-shell { --seller-side-w: 76px; }
+  .seller-side__inner {
+    padding: 16px 10px;
+    gap: 16px;
+    align-items: center;
+  }
+  .seller-side__identity { padding: 6px; }
+  .seller-side__idtext,
+  .seller-side__label,
+  .seller-side__hint { display: none; }
+  .seller-side__link {
+    justify-content: center;
+    padding: 11px 0;
+  }
+  .seller-side__foot { align-items: center; }
+  .seller-side__store-link { padding: 10px 0; }
+
+  /* Tooltip: the label lives in data-label, so it still reaches screen
+     readers through the link's own accessible name. */
+  .seller-side__link::after {
+    content: attr(data-label);
+    position: absolute;
+    left: calc(100% + 10px);
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 5;
+    padding: 6px 10px;
+    border-radius: var(--r-sm);
+    background: #0c2142;
+    color: #fff;
+    font-size: 0.75rem;
+    font-weight: 600;
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    box-shadow: var(--shadow-lg);
+    transition: opacity var(--t-fast) var(--ease-out);
+  }
+  .seller-side__link:hover::after,
+  .seller-side__link:focus-visible::after { opacity: 1; }
+}
+
+@media (max-width: 639px) {
+  .seller-shell { grid-template-columns: minmax(0, 1fr); }
+  .seller-side { display: none; }
+
+  /* Clear the fixed tab bar plus the home-indicator inset. */
+  .seller-main__inner {
+    padding: 18px 16px;
+    padding-bottom: calc(var(--seller-tabs-h) + env(safe-area-inset-bottom, 0px) + 18px);
+  }
+
+  .seller-tabs {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 95;
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    height: calc(var(--seller-tabs-h) + env(safe-area-inset-bottom, 0px));
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    background: rgba(255, 255, 255, 0.94);
+    backdrop-filter: saturate(180%) blur(14px);
+    -webkit-backdrop-filter: saturate(180%) blur(14px);
+    border-top: 1px solid var(--border);
+    box-shadow: 0 -4px 18px rgba(15, 52, 96, 0.08);
+  }
+  .seller-tab {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    min-width: 0;
+    color: var(--text-muted);
+    font-size: 0.625rem;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    transition: color var(--t-fast) var(--ease-out);
+  }
+  .seller-tab svg { flex-shrink: 0; }
+  .seller-tab__label {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .seller-tab.is-active { color: var(--brand-600); }
+  .seller-tab.is-active svg { stroke-width: 2.4; }
+  .seller-tab:focus-visible { outline: 2px solid var(--brand-500); outline-offset: -4px; }
+}
+
+/* 280px: five labelled tabs do not fit, so fall back to icons only. */
+@media (max-width: 359px) {
+  .seller-tabs { --seller-tabs-h: 54px; }
+  .seller-tab__label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+}
+
+/* --- Seller gate --------------------------------------------------------- */
+
+.seller-gate {
+  max-width: 560px;
+  margin: clamp(40px, 12vh, 96px) auto;
+  padding: 34px clamp(20px, 4vw, 40px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  text-align: center;
+  border-radius: var(--r-lg);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-sm);
+}
+.seller-gate__icon {
+  display: grid;
+  place-items: center;
+  width: 58px;
+  height: 58px;
+  margin-bottom: 4px;
+  border-radius: var(--r-md);
+  background: var(--brand-50);
+  color: var(--brand-600);
+}
+.seller-gate h1 { margin: 0; font-size: 1.375rem; letter-spacing: -0.02em; }
+.seller-gate p { margin: 0; color: var(--text-muted); font-size: 0.9375rem; line-height: 1.6; }
+.seller-gate__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 8px;
+}
+
 /* --- Stat tiles ---------------------------------------------------------- */
 
 .stat-row {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(212px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(232px, 1fr));
   gap: 16px;
 }
 .stat-row--four { grid-template-columns: repeat(4, minmax(0, 1fr)); }
@@ -14,9 +324,37 @@
 @media (max-width: 1100px) {
   .stat-row--four { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
-@media (max-width: 560px) {
+/* Six stacked tiles is a lot of scrolling on a phone, so hold two columns
+   down to 360px and only give up below that. */
+@media (max-width: 720px) {
+  .stat-row,
+  .stat-row--four { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+  .stat-tile { padding: 14px; gap: 5px; }
+  .stat-tile__icon { width: 28px; height: 28px; }
+  .stat-tile__icon svg { width: 15px; height: 15px; }
+}
+@media (max-width: 359px) {
   .stat-row,
   .stat-row--four { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* Entrance: one shared curve, per-tile delay. The global reduced-motion rule
+   in 02-base.css collapses this to an instant paint. */
+@keyframes tile-rise {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: none; }
+}
+.stat-row > .stat-tile {
+  animation: tile-rise 420ms var(--ease-out) both;
+}
+.stat-row > .stat-tile:nth-child(1) { animation-delay: 40ms; }
+.stat-row > .stat-tile:nth-child(2) { animation-delay: 90ms; }
+.stat-row > .stat-tile:nth-child(3) { animation-delay: 140ms; }
+.stat-row > .stat-tile:nth-child(4) { animation-delay: 190ms; }
+.stat-row > .stat-tile:nth-child(5) { animation-delay: 240ms; }
+.stat-row > .stat-tile:nth-child(6) { animation-delay: 290ms; }
+@media (prefers-reduced-motion: reduce) {
+  .stat-row > .stat-tile { animation: none; }
 }
 
 .stat-tile {
@@ -186,14 +524,18 @@
 
 .chart__label-x {
   position: absolute;
-  bottom: -20px;
+  bottom: -19px;
   left: 50%;
   transform: translateX(-50%);
   font-style: normal;
   font-size: 0.625rem;
   color: var(--text-faint);
   white-space: nowrap;
+  pointer-events: none;
 }
+/* The final tick sits on the right edge, so pull it inside the plot. */
+.chart__col:last-child .chart__label-x { transform: translateX(-100%); }
+.chart__col:first-child .chart__label-x { transform: translateX(0); }
 
 /* --- Pipeline ------------------------------------------------------------ */
 
@@ -385,23 +727,61 @@
 .customer-list strong { display: block; font-size: 0.875rem; font-weight: 650; }
 .customer-list em { font-style: normal; font-size: 0.7188rem; color: var(--text-muted); }
 
-.order-list { display: flex; flex-direction: column; }
-.order-row {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  padding: 14px 0;
-  border-bottom: 1px solid var(--border);
-  min-width: 0;
+/* Desktop: a real table, so order number / date / total / status line up
+   across rows instead of drifting with each row's content height. */
+.order-table-wrap { overflow-x: auto; }
+.order-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
 }
-.order-row:last-child { border-bottom: 0; }
+.order-table thead th {
+  padding: 0 12px 10px;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  text-align: left;
+  white-space: nowrap;
+}
+.order-table thead th:first-child { padding-left: 0; }
+.order-table thead th:last-child { padding-right: 0; text-align: right; }
+.order-table tbody td {
+  padding: 13px 12px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: middle;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+.order-table tbody tr:last-child td { border-bottom: 0; }
+.order-table tbody td:first-child { padding-left: 0; }
+.order-table tbody td:last-child { padding-right: 0; text-align: right; }
+.order-table tbody tr {
+  transition: background var(--t-fast) var(--ease-out);
+}
+.order-table tbody tr:hover { background: var(--surface-sunken); }
+
+.order-cell { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.order-cell__text { min-width: 0; }
+.order-cell--total { color: var(--text) !important; font-weight: 700; }
+.order-cell--action .btn { white-space: nowrap; }
+
 .order-row__number {
   font-size: 0.875rem;
   font-weight: 700;
   color: var(--text);
+  margin: 0;
+}
+.order-row__stores {
+  margin: 2px 0 0;
+  font-size: 0.7188rem;
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
-.order-row__number:hover { color: var(--brand-600); }
 .order-row__thumbs { display: flex; flex-shrink: 0; }
 .order-row__thumbs .smart-image {
   width: 36px;
@@ -411,18 +791,53 @@
   margin-left: -10px;
 }
 .order-row__thumbs .smart-image:first-child { margin-left: 0; }
-.order-row__info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
-.order-row__info strong { font-size: 0.875rem; font-weight: 600; }
-.order-row__stores { font-size: 0.7188rem; color: var(--text-muted); }
-.order-row__meta {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  font-size: 0.8125rem;
-  color: var(--text-secondary);
-  white-space: nowrap;
+
+/* Below 900px the table becomes a stack of cards. Every cell keeps its label
+   through data-label, so no column header is lost in the reflow. */
+@media (max-width: 899px) {
+  .order-table-wrap { overflow-x: visible; }
+  .order-table,
+  .order-table tbody,
+  .order-table tr,
+  .order-table td { display: block; width: 100%; }
+  .order-table thead { display: none; }
+  .order-table tbody tr {
+    padding: 13px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .order-table tbody tr:last-child { border-bottom: 0; }
+  .order-table tbody td,
+  .order-table tbody td:first-child,
+  .order-table tbody td:last-child {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    padding: 3px 0;
+    text-align: left;
+    white-space: normal;
+    background: none;
+  }
+  .order-table tbody td::before {
+    content: attr(data-label);
+    flex-shrink: 0;
+    font-size: 0.6875rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--text-faint);
+  }
+  .order-table tbody td:first-child { margin-bottom: 5px; }
+  .order-table tbody td:first-child::before { display: none; }
+  .order-table tbody td[data-label="Placed"],
+  .order-table tbody td[data-label="Total"],
+  .order-table tbody td[data-label="Status"] { justify-content: flex-start; }
+  .order-table tbody td[data-label="Placed"]::before,
+  .order-table tbody td[data-label="Total"]::before,
+  .order-table tbody td[data-label="Status"]::before { width: 76px; }
+  .order-table tbody td.order-cell--action { justify-content: flex-end; margin-top: 8px; }
+  .order-table tbody tr:hover { background: none; }
 }
-.order-row__meta strong { color: var(--text); font-weight: 700; }
 
 .seller-tip {
   display: flex;
@@ -937,7 +1352,9 @@
 
 .asset-upload-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  /* min() keeps the 280px track from becoming a floor: on a 280px phone the
+     available width is ~206px, and a bare minmax(280px, 1fr) would overflow. */
+  grid-template-columns: repeat(auto-fit, minmax(min(280px, 100%), 1fr));
   gap: 16px;
   margin-bottom: 18px;
 }
@@ -961,20 +1378,20 @@
 
 /* --- Seller workspace hero ---------------------------------------------- */
 
-.store-hero {
+.seller-card {
   position: relative;
   overflow: hidden;
   border-radius: var(--r-lg);
   background: var(--surface);
   box-shadow: var(--shadow-sm);
 }
-.store-hero__cover {
+.seller-card__cover {
   height: 132px;
   background: linear-gradient(120deg, var(--brand-700), var(--brand-400));
 }
-.store-hero__cover .smart-image { height: 100%; border-radius: 0; }
-.store-hero__cover img { height: 100%; object-fit: cover; }
-.store-hero__cover::after {
+.seller-card__cover .smart-image { height: 100%; border-radius: 0; }
+.seller-card__cover img { height: 100%; object-fit: cover; }
+.seller-card__cover::after {
   content: "";
   position: absolute;
   inset: 0 0 auto;
@@ -983,16 +1400,18 @@
   pointer-events: none;
 }
 
-.store-hero__body {
+.seller-card__body {
   display: flex;
+  flex-direction: row;
   align-items: flex-end;
-  gap: 20px;
+  flex-wrap: wrap;
+  gap: 14px 20px;
   padding: 0 24px 22px;
   margin-top: -34px;
 }
-.store-hero__body > .store-logo { flex: none; box-shadow: 0 0 0 5px var(--surface), var(--shadow-md); }
-.store-hero__text { flex: 1; min-width: 0; }
-.store-hero__eyebrow {
+.seller-card__body > .store-logo { flex: none; box-shadow: 0 0 0 5px var(--surface), var(--shadow-md); }
+.seller-card__text { flex: 1 1 260px; min-width: 0; }
+.seller-card__eyebrow {
   display: inline-flex;
   align-items: center;
   gap: 5px;
@@ -1003,12 +1422,12 @@
   text-transform: uppercase;
   color: var(--brand-600);
 }
-.store-hero__name {
+.seller-card__name {
   margin: 2px 0 2px;
   font-size: 1.375rem;
   line-height: 1.2;
 }
-.store-hero__tagline {
+.seller-card__tagline {
   margin: 0;
   font-size: 0.8125rem;
   color: var(--text-muted);
@@ -1016,7 +1435,18 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.store-hero__chips {
+/* The action row shares one baseline with the logo and the store name, then
+   drops to its own full-width line when the card can no longer hold all
+   three. Previously it was a non-wrapping flex row, so on a phone the logo
+   was pushed against the far edge and the text collapsed to nothing. */
+.seller-card__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  flex: none;
+}
+.seller-card__chips {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
@@ -1024,7 +1454,7 @@
   padding: 0;
   list-style: none;
 }
-.store-hero__chips li {
+.seller-card__chips li {
   display: inline-flex;
   align-items: center;
   gap: 5px;
@@ -1035,7 +1465,6 @@
   font-weight: 600;
   color: var(--text-muted);
 }
-.store-hero__actions { display: flex; flex-wrap: wrap; gap: 10px; flex: none; }
 
 /* --- Quick action strip -------------------------------------------------- */
 
@@ -1059,8 +1488,14 @@
 }
 .quick-actions__grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  grid-template-columns: minmax(0, 1fr);
   gap: 12px;
+}
+@media (min-width: 640px) {
+  .quick-actions__grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (min-width: 1180px) {
+  .quick-actions__grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 }
 .quick-action {
   display: flex;
@@ -1186,31 +1621,60 @@
 .chart__col {
   position: relative;
   flex: 1;
+  min-width: 0;
   height: 100%;
   display: flex;
   align-items: flex-end;
   justify-content: center;
   border-radius: var(--r-xs);
+  /* These are <button>s so the chart is keyboard-reachable; reset the UA
+     button chrome and keep only the hover/active affordance. */
+  appearance: none;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
 }
+.chart__col:focus-visible { outline: 2px solid var(--brand-500); outline-offset: 1px; }
+.chart__col.is-active { background: rgba(26, 115, 232, 0.07); }
 .chart__col .chart__bar {
+  display: block;
   width: 100%;
   min-width: 3px;
   border-radius: 3px 3px 0 0;
   background: linear-gradient(180deg, var(--brand-400), var(--brand-600));
-  transition: filter var(--t-fast) var(--ease-out), transform var(--t-fast) var(--ease-out);
+  transform-origin: bottom;
+  transition: filter var(--t-fast) var(--ease-out), background var(--t-fast) var(--ease-out);
 }
+.chart__col.is-active .chart__bar { background: linear-gradient(180deg, var(--accent-400), var(--accent-600)); }
 .chart__col.is-empty .chart__bar { background: var(--border-strong); }
-.chart__col:hover .chart__bar { filter: brightness(1.08); transform: scaleY(1.02); transform-origin: bottom; }
-.chart__value-x {
+.chart__col:hover .chart__bar { filter: brightness(1.08); }
+
+/* Clamped tooltip. `left`/`bottom` are measured in JS against the plot's
+   content box, so the arrow of this bubble can never leave the chart. */
+.chart__tip {
   position: absolute;
-  top: -16px;
-  left: 50%;
-  transform: translateX(-50%);
-  font-style: normal;
-  font-size: 0.625rem;
-  font-weight: 700;
-  color: var(--brand-700);
+  z-index: 4;
+  transform: translate(-50%, -100%);
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 6px 10px;
+  border-radius: var(--r-sm);
+  background: #0c2142;
+  color: #fff;
+  font-size: 0.7188rem;
+  line-height: 1.35;
   white-space: nowrap;
+  pointer-events: none;
+  box-shadow: var(--shadow-lg);
+  animation: chart-tip-in var(--t-fast) var(--ease-out) both;
+}
+.chart__tip strong { font-weight: 700; }
+.chart__tip em { font-style: normal; color: rgba(255, 255, 255, 0.66); }
+@keyframes chart-tip-in {
+  from { opacity: 0; transform: translate(-50%, -92%); }
+  to { opacity: 1; transform: translate(-50%, -100%); }
 }
 .chart__label-x {
   position: absolute;
@@ -1236,17 +1700,83 @@
 /* --- Responsive --------------------------------------------------------- */
 
 @media (max-width: 900px) {
-  .store-hero__body { flex-wrap: wrap; gap: 14px; padding: 0 18px 18px; }
-  .store-hero__actions { width: 100%; }
-  .store-hero__actions .btn { flex: 1; justify-content: center; }
+  .seller-card__body { gap: 14px; padding: 0 18px 18px; }
+  /* Keep the logo sitting on the cover's bottom edge. Once the body wraps,
+     the taller text column would otherwise push the logo clear of the banner. */
+  .seller-card__body > .store-logo { align-self: flex-start; }
+  .seller-card__actions { flex: 1 0 100%; margin-top: 4px; }
+  .seller-card__actions .btn { flex: 1 1 auto; justify-content: center; }
+}
+@media (max-width: 720px) {
+  .seller-card__cover,
+  .seller-card__cover::after { height: 104px; }
+  .seller-card__body { margin-top: -28px; padding: 0 16px 18px; }
+  .seller-card__body > .store-logo { width: 68px; height: 68px; padding: 9px; }
+  .seller-card__name { font-size: 1.125rem; }
+  .seller-card__tagline { white-space: normal; }
 }
 @media (max-width: 640px) {
-  .store-hero__cover,
-  .store-hero__cover::after { height: 104px; }
-  .store-hero__body { flex-direction: column; align-items: stretch; }
-  .store-hero__body > .store-logo { align-self: flex-start; }
-  .store-hero__tagline { white-space: normal; }
   .checklist__items { grid-template-columns: 1fr; }
   .checklist__progress { align-items: flex-start; }
   .chart__plot { height: 140px; }
+}
+
+/* --- Phone card tables ---------------------------------------------------
+   Wide seller tables (orders, customers) cannot compress to 320px without
+   either truncating money columns or forcing a horizontal scroll. Below
+   640px each row becomes a card and every cell keeps its column header via
+   data-label, so no label is lost in the reflow.
+   ------------------------------------------------------------------------- */
+
+@media (max-width: 639px) {
+  .table-wrap { overflow-x: visible; }
+  .table-wrap table,
+  .table-wrap tbody,
+  .table-wrap tbody tr,
+  .table-wrap tbody td { display: block; width: 100%; }
+  /* The desktop rule pins min-width: 640px so the table can scroll sideways.
+     As cards there is nothing to scroll, so that floor has to go. */
+  .table-wrap table { min-width: 0; }
+  .table-wrap thead { display: none; }
+  .table-wrap tbody tr {
+    padding: 13px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .table-wrap tbody tr:last-child { border-bottom: 0; }
+  .table-wrap tbody tr:hover { background: none; }
+  .table-wrap tbody tr.is-selected { background: var(--brand-50); }
+  .table-wrap tbody td,
+  .table-wrap tbody td:first-child,
+  .table-wrap tbody td:last-child {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    padding: 3px 0;
+    border: 0;
+    text-align: left;
+    white-space: normal;
+  }
+  .table-wrap tbody td::before {
+    content: attr(data-label);
+    flex-shrink: 0;
+    font-size: 0.6875rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--text-faint);
+  }
+  /* The first cell is the card's title, so it needs no inline label. */
+  .table-wrap tbody td:first-child {
+    margin-bottom: 6px;
+    justify-content: flex-start;
+  }
+  .table-wrap tbody td:first-child::before { display: none; }
+  .table-wrap tbody td.table-actions {
+    justify-content: flex-end;
+    margin-top: 9px;
+  }
+  .table-wrap tbody td.table-actions::before { display: none; }
+  .table-wrap tbody td.table-actions { opacity: 1; }
+  .table-wrap tbody td.table-actions .btn { width: 100%; justify-content: center; }
 }

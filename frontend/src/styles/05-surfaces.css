@@ -361,6 +361,14 @@
 .hours-rows__day svg { color: var(--text-faint); }
 .hours li.is-closed > :last-child { color: var(--danger-500); }
 
+/* A <input type="time"> derives its width from its `size` attribute, which
+   ignores the available space and pushes the row past a 280px viewport.
+   Capping it lets the row shrink, and wrapping keeps the label readable. */
+.hours-rows li,
+.hours li { flex-wrap: wrap; }
+.hours-rows input[type="time"],
+.hours input[type="time"] { min-width: 0; max-width: 100%; flex: 0 1 auto; }
+
 /* --- Feedback states ----------------------------------------------------- */
 
 .loading-block {

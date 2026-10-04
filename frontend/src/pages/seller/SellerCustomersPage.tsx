@@ -112,7 +112,7 @@ export default function SellerCustomersPage() {
                   className={selected?.id === customer.id ? "is-selected" : undefined}
                   onClick={() => setSelected(customer)}
                 >
-                  <td>
+                  <td data-label="Customer">
                     <div className="table-person">
                       <Avatar src={customer.avatar} name={customer.name} size={34} />
                       <span>
@@ -121,14 +121,14 @@ export default function SellerCustomersPage() {
                       </span>
                     </div>
                   </td>
-                  <td>
+                  <td data-label="Orders">
                     <span className="table-strong">{customer.orders}</span>
                   </td>
-                  <td>
+                  <td data-label="Total spend">
                     <span className="table-strong">{currency(customer.spend)}</span>
                   </td>
-                  <td>{currency(customer.averageOrderValue)}</td>
-                  <td>
+                  <td data-label="Average order">{currency(customer.averageOrderValue)}</td>
+                  <td data-label="Last order">
                     <span title={formatDateTime(customer.lastOrderAt)}>
                       {customer.lastOrderAt ? formatDateTime(customer.lastOrderAt) : "—"}
                     </span>

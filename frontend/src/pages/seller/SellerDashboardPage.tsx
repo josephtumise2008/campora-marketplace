@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import { motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 import {
   AlertTriangle,
   ArrowDownRight,
@@ -25,6 +25,7 @@ import {
 import { sellerService } from "../../services/marketplace";
 import type { Order, OrderStatus, SellerDashboard } from "../../types";
 import { useAsync } from "../../hooks/useAsync";
+import { useCountUp } from "../../hooks/useCountUp";
 import { currency, cx, formatDate, numberCompact, nextOrderStatus, relativeTime } from "../../utils/format";
 import { PageHeader } from "../../components/common/SectionHeader";
 import { OrderStatusBadge } from "../../components/common/OrderBits";
@@ -46,20 +47,71 @@ function Trend({ value, suffix = "%" }: { value: number; suffix?: string }) {
   );
 }
 
+/** Tweens a number into place; used for the tiles and the chart headline so a
+ *  fresh dashboard reads as "live" rather than as a static table. */
+function CountUp({
+  value,
+  format,
+}: {
+  value: number;
+  format: (n: number) => string;
+}) {
+  const ref = useCountUp(value, format);
+  return <span ref={ref}>{format(value)}</span>;
+}
+
 function RevenueChart({ series }: { series: SellerDashboard["series"] }) {
+  const reduceMotion = useReducedMotion();
+  const plotRef = useRef<HTMLDivElement>(null);
+  const [activeIndex, setActiveIndex] = useState<number | null>(null);
+  const [plot, setPlot] = useState({ width: 0, height: 0 });
+
   const max = Math.max(...series.map((row) => row.revenue), 1);
   const total = series.reduce((sum, row) => sum + row.revenue, 0);
-
   const best = series.reduce((peak, row) => (row.revenue > peak.revenue ? row : peak), series[0]);
   const activeDays = series.filter((row) => row.revenue > 0).length;
   const orders = series.reduce((sum, row) => sum + row.orders, 0);
+
+  /* Tick density follows the plot width, not the viewport: 30 bars in 280px
+   * leaves ~9px per bar, so a label every fifth day would overlap its
+   * neighbour. */
+  useEffect(() => {
+    const node = plotRef.current;
+    if (!node) return undefined;
+    const observer = new ResizeObserver(([entry]) =>
+      setPlot({ width: entry.contentRect.width, height: entry.contentRect.height })
+    );
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, []);
+
+  const { width: plotWidth, height: plotHeight } = plot;
+  const tickEvery = plotWidth === 0 ? 5 : plotWidth < 320 ? 10 : plotWidth < 520 ? 7 : 5;
+
+  const active = activeIndex === null ? null : series[activeIndex];
+  /* Centre the tooltip over its bar, then clamp it inside the plot on both
+   * axes: horizontally so the first/last bar cannot push it past the card
+   * edge, vertically so a peak bar cannot lift it over the chart header. */
+  const tooltip = (() => {
+    if (!active || activeIndex === null || plotWidth === 0) return undefined;
+    const barTop = (Math.max(3, (active.revenue / max) * 100) / 100) * plotHeight;
+    return {
+      left: Math.min(
+        Math.max(((activeIndex + 0.5) / series.length) * plotWidth, 56),
+        Math.max(plotWidth - 56, 56)
+      ),
+      bottom: Math.min(barTop + 10, Math.max(plotHeight - 34, 40)),
+    };
+  })();
 
   return (
     <div className="chart">
       <header className="chart__head">
         <div>
           <p className="chart__label">Revenue · last {series.length} days</p>
-          <p className="chart__value">{currency(total)}</p>
+          <p className="chart__value">
+            <CountUp value={total} format={(n) => currency(n)} />
+          </p>
         </div>
         <div className="chart__meta">
           <span className="chart__badge">
@@ -73,23 +125,61 @@ function RevenueChart({ series }: { series: SellerDashboard["series"] }) {
 
       <div
         className="chart__plot"
+        ref={plotRef}
         role="img"
         aria-label={`Revenue over ${series.length} days, total ${currency(total)} from ${orders} orders. Best day ${currency(best.revenue)}.`}
+        onMouseLeave={() => setActiveIndex(null)}
       >
         <span className="chart__axis" aria-hidden="true">
           <em>{currency(max, { compact: true })}</em>
         </span>
-        {series.map((row, index) => (
+
+        {active && tooltip ? (
           <span
-            key={row.date}
-            className={cx("chart__col", row.revenue === 0 && "is-empty")}
-            title={`${row.date}: ${currency(row.revenue)} from ${row.orders} order(s)`}
+            className="chart__tip"
+            style={{ left: tooltip.left, bottom: tooltip.bottom }}
+            role="status"
+            aria-live="polite"
           >
-            <span className="chart__bar" style={{ height: `${Math.max(3, (row.revenue / max) * 100)}%` }}>
-              {index === series.length - 1 ? <em className="chart__value-x">{currency(row.revenue, { compact: true })}</em> : null}
-            </span>
-            {index % 5 === 0 ? <em className="chart__label-x">{row.date.slice(5)}</em> : null}
+            <strong>{currency(active.revenue)}</strong>
+            <em>
+              {active.date.slice(5)} · {active.orders} order{active.orders === 1 ? "" : "s"}
+            </em>
           </span>
+        ) : null}
+
+        {series.map((row, index) => (
+          <button
+            type="button"
+            key={row.date}
+            className={cx(
+              "chart__col",
+              row.revenue === 0 && "is-empty",
+              activeIndex === index && "is-active"
+            )}
+            aria-label={`${row.date}: ${currency(row.revenue)} from ${row.orders} order${
+              row.orders === 1 ? "" : "s"
+            }`}
+            onMouseEnter={() => setActiveIndex(index)}
+            onFocus={() => setActiveIndex(index)}
+            onBlur={() => setActiveIndex(null)}
+            onClick={() => setActiveIndex(index)}
+          >
+            <motion.span
+              className="chart__bar"
+              style={{ height: `${Math.max(3, (row.revenue / max) * 100)}%` }}
+              initial={reduceMotion ? false : { scaleY: 0 }}
+              animate={{ scaleY: 1 }}
+              transition={{
+                duration: 0.55,
+                ease: [0.16, 1, 0.3, 1],
+                delay: Math.min(index * 0.012, 0.34),
+              }}
+            />
+            {index % tickEvery === 0 || index === series.length - 1 ? (
+              <em className="chart__label-x">{row.date.slice(5)}</em>
+            ) : null}
+          </button>
         ))}
       </div>
 
@@ -106,6 +196,7 @@ function RevenueChart({ series }: { series: SellerDashboard["series"] }) {
 }
 
 export default function SellerDashboardPage() {
+  const reduceMotion = useReducedMotion();
   const toast = useToast();
   const { data, loading, error, reload } = useAsync<SellerDashboard>(
     () => sellerService.dashboard(),
@@ -159,27 +250,26 @@ export default function SellerDashboardPage() {
           store.verification === "verified" ? "Verified campus store" : "Awaiting verification"
         }`}
         actions={
-          <>
-            <Link to={`/stores/${store.slug}`} className="btn btn--ghost">
-              <Store size={16} aria-hidden="true" />
-              View public store
-            </Link>
-            <Link to="/seller/products/new" className="btn btn--primary">
-              <Plus size={16} aria-hidden="true" />
-              Add product
-            </Link>
-          </>
+          <Link to={`/stores/${store.slug}`} className="btn btn--ghost">
+            <Store size={16} aria-hidden="true" />
+            View public store
+          </Link>
         }
       />
 
-      <section className="store-hero">
-        <div className="store-hero__cover">
+      <motion.section
+        className="seller-card"
+        initial={reduceMotion ? false : { opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
+      >
+        <div className="seller-card__cover">
           <SmartImage src={store.cover} alt="" ratio="wide" fallbackLabel="" />
         </div>
-        <div className="store-hero__body">
+        <div className="seller-card__body">
           <StoreLogo logo={store.logo} name={store.name} size="lg" />
-          <div className="store-hero__text">
-            <p className="store-hero__eyebrow">
+          <div className="seller-card__text">
+            <p className="seller-card__eyebrow">
               {store.verification === "verified" ? (
                 <>
                   <BadgeCheck size={14} aria-hidden="true" /> Verified campus store
@@ -190,9 +280,9 @@ export default function SellerDashboardPage() {
                 </>
               )}
             </p>
-            <h2 className="store-hero__name">{store.name}</h2>
-            <p className="store-hero__tagline">{store.tagline}</p>
-            <ul className="store-hero__chips">
+            <h2 className="seller-card__name">{store.name}</h2>
+            <p className="seller-card__tagline">{store.tagline}</p>
+            <ul className="seller-card__chips">
               <li>
                 <Star size={13} aria-hidden="true" /> {stats.rating.toFixed(1)} ·{" "}
                 {numberCompact(stats.reviewCount)} reviews
@@ -205,39 +295,36 @@ export default function SellerDashboardPage() {
               </li>
             </ul>
           </div>
-          <div className="store-hero__actions">
+          <div className="seller-card__actions">
             <Link to="/seller/products/new" className="btn btn--primary">
               <Plus size={16} aria-hidden="true" /> Add product
             </Link>
-            <Link to="/seller/products/new" className="btn btn--secondary">
-              <Camera size={16} aria-hidden="true" /> Upload photos
-            </Link>
-            <Link to="/seller/store" className="btn btn--ghost btn--sm">
-              <Settings size={15} aria-hidden="true" /> Store settings
+            <Link to="/seller/store" className="btn btn--secondary">
+              <Settings size={16} aria-hidden="true" /> Store settings
             </Link>
           </div>
         </div>
-      </section>
+      </motion.section>
 
       <QuickActions />
 
       <div className="stat-row">
         <StatTile
           label="Revenue · 30 days"
-          value={currency(stats.revenue30, { compact: true })}
+          value={<CountUp value={stats.revenue30} format={(n) => currency(n, { compact: true })} />}
           hint={<Trend value={stats.revenueChange} />}
           icon={<Wallet size={18} aria-hidden="true" />}
           tone="brand"
         />
         <StatTile
           label="Orders · 30 days"
-          value={stats.orders30}
+          value={<CountUp value={stats.orders30} format={(n) => Math.round(n).toLocaleString()} />}
           hint={<Trend value={stats.ordersChange} />}
           icon={<ShoppingBag size={18} aria-hidden="true" />}
         />
         <StatTile
           label="Average order"
-          value={currency(stats.averageOrderValue)}
+          value={<CountUp value={stats.averageOrderValue} format={(n) => currency(n)} />}
           hint={`Previous ${currency(stats.averageOrderValuePrevious)}`}
           icon={<BarChart3 size={18} aria-hidden="true" />}
         />
@@ -250,13 +337,13 @@ export default function SellerDashboardPage() {
         />
         <StatTile
           label="Active customers"
-          value={stats.customers}
+          value={<CountUp value={stats.customers} format={(n) => Math.round(n).toLocaleString()} />}
           hint="Unique buyers, all time"
           icon={<Users size={18} aria-hidden="true" />}
         />
         <StatTile
           label="Products live"
-          value={stats.products}
+          value={<CountUp value={stats.products} format={(n) => Math.round(n).toLocaleString()} />}
           hint={
             lowStock.length ? (
               <span className="stat-hint-warning">
@@ -338,48 +425,74 @@ export default function SellerDashboardPage() {
             }
           />
         ) : (
-          <ul className="order-list">
-            {recentOrders.map((order) => {
-              const next = nextOrderStatus(order.status)[0];
-              return (
-                <li key={order._id} className="order-row">
-                  <div className="order-row__thumbs">
-                    {order.items.slice(0, 2).map((item, index) => (
-                      <SmartImage
-                        key={`${item.name}-${index}`}
-                        src={item.image}
-                        alt={item.name}
-                        ratio="square"
-                        fallbackLabel={item.name}
-                      />
-                    ))}
-                  </div>
-                  <div className="order-row__info">
-                    <p className="order-row__number">{order.orderNumber}</p>
-                    <p className="order-row__meta">
-                      {relativeTime(order.placedAt)} · {currency(order.storeSubtotal ?? order.totals.total)}
-                    </p>
-                    <p className="order-row__stores">
-                      {typeof order.customer === "object" ? order.customer?.name : "Customer"}
-                    </p>
-                  </div>
-                  <OrderStatusBadge status={order.status} />
-                  {next ? (
-                    <button
-                      type="button"
-                      className="btn btn--secondary btn--sm"
-                      onClick={() => advance(order, next)}
-                      disabled={updating === order._id}
-                    >
-                      {updating === order._id ? "…" : next}
-                    </button>
-                  ) : (
-                    <span className="muted-note">Complete</span>
-                  )}
-                </li>
-              );
-            })}
-          </ul>
+          /* A real table on desktop so the columns line up; below 900px the
+             same markup reflows into per-order cards via data-label. */
+          <div className="order-table-wrap">
+            <table className="order-table">
+              <thead>
+                <tr>
+                  <th scope="col">Order</th>
+                  <th scope="col">Placed</th>
+                  <th scope="col">Total</th>
+                  <th scope="col">Status</th>
+                  <th scope="col">
+                    <span className="sr-only">Advance</span>
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {recentOrders.map((order) => {
+                  const next = nextOrderStatus(order.status)[0];
+                  return (
+                    <tr key={order._id}>
+                      <td data-label="Order">
+                        <div className="order-cell">
+                          <div className="order-row__thumbs">
+                            {order.items.slice(0, 2).map((item, index) => (
+                              <SmartImage
+                                key={`${item.name}-${index}`}
+                                src={item.image}
+                                alt={item.name}
+                                ratio="square"
+                                fallbackLabel={item.name}
+                              />
+                            ))}
+                          </div>
+                          <div className="order-cell__text">
+                            <p className="order-row__number">{order.orderNumber}</p>
+                            <p className="order-row__stores">
+                              {typeof order.customer === "object" ? order.customer?.name : "Customer"}
+                            </p>
+                          </div>
+                        </div>
+                      </td>
+                      <td data-label="Placed">{relativeTime(order.placedAt)}</td>
+                      <td data-label="Total" className="order-cell--total">
+                        {currency(order.storeSubtotal ?? order.totals.total)}
+                      </td>
+                      <td data-label="Status">
+                        <OrderStatusBadge status={order.status} />
+                      </td>
+                      <td className="order-cell--action">
+                        {next ? (
+                          <button
+                            type="button"
+                            className="btn btn--secondary btn--sm"
+                            onClick={() => advance(order, next)}
+                            disabled={updating === order._id}
+                          >
+                            {updating === order._id ? "…" : next}
+                          </button>
+                        ) : (
+                          <span className="muted-note">Complete</span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         )}
 
         {pending.length > 0 ? (

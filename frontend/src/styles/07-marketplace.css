@@ -430,15 +430,43 @@
 .store-card--skeleton:hover { transform: none; box-shadow: var(--shadow-xs); }
 .store-card--skeleton .store-card__body { padding: 18px; gap: 10px; }
 
-/* Store marquee */
+/* Store marquee — a continuously scrolling strip.
+   The group of items is repeated until it is wider than the container (measured
+   in JS), then the whole track is advanced by exactly one group width. That is
+   what makes the loop seamless: the copy entering on the right is identical to
+   the one leaving on the left. JS supplies --marquee-shift and
+   --marquee-duration; the fallbacks keep it sane before the first measurement. */
 .store-marquee {
-  display: flex;
-  align-items: stretch;
-  gap: 14px;
-  overflow-x: auto;
+  --marquee-gap: 14px;
+  --marquee-shift: 460px;
+  --marquee-duration: 24s;
+  position: relative;
+  overflow: hidden;
   padding: 22px 0 8px;
   margin-top: 22px;
-  scrollbar-width: thin;
+  /* Fade both ends so items glide in and out instead of popping at the edges. */
+  -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 28px, #000 calc(100% - 28px), transparent 100%);
+  mask-image: linear-gradient(90deg, transparent 0, #000 28px, #000 calc(100% - 28px), transparent 100%);
+}
+.store-marquee__track {
+  display: flex;
+  align-items: stretch;
+  gap: var(--marquee-gap);
+  width: max-content;
+  animation: store-marquee-scroll var(--marquee-duration) linear infinite;
+  will-change: transform;
+}
+.store-marquee__group {
+  display: flex;
+  align-items: stretch;
+  gap: var(--marquee-gap);
+}
+/* Hold still while someone is reading it or tabbing through it. */
+.store-marquee:hover .store-marquee__track,
+.store-marquee:focus-within .store-marquee__track { animation-play-state: paused; }
+@keyframes store-marquee-scroll {
+  from { transform: translateX(0); }
+  to { transform: translateX(calc(var(--marquee-shift) * -1)); }
 }
 .store-marquee__item {
   flex: 0 0 auto;
@@ -461,6 +489,14 @@
   box-shadow: var(--shadow-sm);
 }
 .store-marquee__item .store-logo { width: 34px; height: 34px; border-radius: var(--r-full); padding: 3px; }
+
+/* No auto-scroll when the OS asks for reduced motion. Because the strip is
+   normally clipped, fall back to a plain swipeable row so the stores that did
+   not fit are still reachable. */
+@media (prefers-reduced-motion: reduce) {
+  .store-marquee { overflow-x: auto; scrollbar-width: thin; }
+  .store-marquee__track { animation: none; will-change: auto; }
+}
 
 /* Store tiles */
 .store-tile {

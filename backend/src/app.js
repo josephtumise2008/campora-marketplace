@@ -11,18 +11,27 @@ const app = express();
 
 app.set("trust proxy", 1);
 
+const LOCAL_ORIGIN = /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/;
+
 app.use(
   cors({
     origin(origin, callback) {
+      // Allow requests with no Origin (curl, Postman, server-to-server)
       if (!origin) return callback(null, true);
+
+      // Development: allow any localhost / 127.0.0.1 port
+      if (env.nodeEnv !== "production" && LOCAL_ORIGIN.test(origin)) {
+        return callback(null, true);
+      }
+
+      // Everything else must be in the explicit allowlist
       if (env.allowedOrigins.includes(origin)) return callback(null, true);
+
       return callback(new Error(`Origin ${origin} is not allowed by CORS`));
     },
     credentials: true,
   })
-);
-
-app.use(express.json({ limit: "2mb" }));
+);app.use(express.json({ limit: "2mb" }));
 app.use(express.urlencoded({ extended: true }));
 
 app.use((req, _res, next) => {

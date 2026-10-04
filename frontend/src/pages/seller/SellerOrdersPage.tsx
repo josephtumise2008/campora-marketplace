@@ -153,7 +153,7 @@ export default function SellerOrdersPage() {
                 const next = ORDER_STATUS_ORDER[ORDER_STATUS_ORDER.indexOf(order.status) + 1];
                 return (
                   <tr key={order._id}>
-                    <td>
+                    <td data-label="Order">
                       <button
                         type="button"
                         className="link-plain link-plain--strong"
@@ -162,7 +162,7 @@ export default function SellerOrdersPage() {
                         {order.orderNumber}
                       </button>
                     </td>
-                    <td>
+                    <td data-label="Items">
                       <div className="table-items">
                         {order.items.slice(0, 3).map((item, index) => (
                           <SmartImage
@@ -178,22 +178,22 @@ export default function SellerOrdersPage() {
                         ) : null}
                       </div>
                     </td>
-                    <td>
+                    <td data-label="Customer">
                       <span className="table-strong">{name}</span>
                       <span className="table-sub">{order.deliveryAddress?.city}</span>
                     </td>
-                    <td>
+                    <td data-label="Total">
                       <span className="table-strong">
                         {currency(order.storeSubtotal ?? order.totals?.total)}
                       </span>
                     </td>
-                    <td>
+                    <td data-label="Status">
                       <OrderStatusBadge status={order.status} />
                     </td>
-                    <td>
+                    <td data-label="Placed">
                       <span title={formatDateTime(order.placedAt)}>{relativeTime(order.placedAt)}</span>
                     </td>
-                    <td className="table-actions">
+                    <td className="table-actions" data-label="Advance">
                       {next ? (
                         <button
                           type="button"

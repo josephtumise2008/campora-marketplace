@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
@@ -202,7 +203,51 @@ function DealsSection({ products }: { products: HomeFeed["deals"] }) {
   );
 }
 
+/** Four store cards fill one row at the 1280px container width
+ *  (4 x 276px min + 3 x 22px gap = 1170px), so anything less leaves a hole. */
+const STORE_GRID_COUNT = 4;
+/** Ceiling on the scrolling strip so a long featured list cannot bloat the DOM. */
+const STORE_STRIP_MAX = 10;
+/** Pixels per second the strip travels. Slow enough to read a tagline while it
+ *  passes, which works out to roughly 27s to cross the container. */
+const MARQUEE_SPEED = 45;
+
 function StoresSection({ stores }: { stores: HomeFeed["featuredStores"] }) {
+  const featured = stores.slice(0, STORE_GRID_COUNT);
+  // The strip re-shows the featured stores as compact pills. Only the four
+  // cards above are big enough to read at a glance, so the strip is what makes
+  // the remaining ones — and the taglines — actually browsable. It is skipped
+  // when the grid already shows everything, to avoid pure duplication.
+  const strip = stores.length > STORE_GRID_COUNT ? stores.slice(0, STORE_STRIP_MAX) : [];
+  const marqueeRef = useRef<HTMLDivElement>(null);
+  const groupRef = useRef<HTMLDivElement>(null);
+  const [shift, setShift] = useState(0);
+  const [duration, setDuration] = useState(24);
+  const [repeats, setRepeats] = useState(2);
+
+  // A seamless loop needs the track to be wider than the container, and it needs
+  // to advance by exactly one group. Both are measured rather than guessed, so
+  // the strip stays correct at any width or item count.
+  useEffect(() => {
+    const el = marqueeRef.current;
+    const group = groupRef.current;
+    if (!el || !group || !strip.length) return undefined;
+    const gap = 14;
+    const measure = () => {
+      const groupWidth = group.getBoundingClientRect().width;
+      if (!groupWidth) return;
+      const step = groupWidth + gap;
+      setShift(step);
+      setDuration(Math.min(120, Math.max(14, step / MARQUEE_SPEED)));
+      setRepeats(Math.max(2, Math.ceil(el.clientWidth / step) + 1));
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(el);
+    observer.observe(group);
+    return () => observer.disconnect();
+  }, [strip.length]);
+
   if (!stores.length) return null;
   return (
     <section className="section">
@@ -219,22 +264,52 @@ function StoresSection({ stores }: { stores: HomeFeed["featuredStores"] }) {
           }
         />
         <div className="store-grid">
-          {stores.slice(0, 3).map((store, index) => (
+          {featured.map((store, index) => (
             <StoreCard key={store._id} store={store} index={index} />
           ))}
         </div>
 
-        <div className="store-marquee" aria-label="More campus stores">
-          {stores.slice(3).map((store) => (
-            <Link key={store._id} to={`/stores/${store.slug}`} className="store-marquee__item">
-              <StoreLogo logo={store.logo} name={store.name} size="sm" />
-              <span>
-                <strong>{store.name}</strong>
-                <em>{store.tagline}</em>
-              </span>
-            </Link>
-          ))}
-        </div>
+        {strip.length ? (
+          <div
+            ref={marqueeRef}
+            className="store-marquee"
+            aria-label="Browse campus stores"
+            style={
+              {
+                "--marquee-shift": `${shift}px`,
+                "--marquee-duration": `${duration}s`,
+              } as CSSProperties
+            }
+          >
+            <div className="store-marquee__track">
+              {Array.from({ length: repeats }, (_unused, copy) => (
+                // Only the first copy is reachable by keyboard or screen reader;
+                // the rest are decoration that make the loop seamless.
+                <div
+                  className="store-marquee__group"
+                  key={copy}
+                  ref={copy === 0 ? groupRef : undefined}
+                  aria-hidden={copy > 0 ? true : undefined}
+                >
+                  {strip.map((store) => (
+                    <Link
+                      key={store._id}
+                      to={`/stores/${store.slug}`}
+                      className="store-marquee__item"
+                      tabIndex={copy > 0 ? -1 : undefined}
+                    >
+                      <StoreLogo logo={store.logo} name={store.name} size="sm" />
+                      <span>
+                        <strong>{store.name}</strong>
+                        <em>{store.tagline}</em>
+                      </span>
+                    </Link>
+                  ))}
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : null}
       </div>
     </section>
   );
